@@ -1,0 +1,54 @@
+# Build output
+build/
+Debug/
+Release/
+
+# Object files
+*.o
+*.obj
+*.su
+*.d
+
+# Compiled files
+*.elf
+*.bin
+*.hex
+*.map
+*.lst
+
+# CMake generated
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+*.ninja
+*.ninja_deps
+*.ninja_log
+
+# IDE files
+.vscode/
+*.uvoptx
+*.uvprojx
+*.uvguix
+*.bak
+
+# Keil/MDK
+*.axf
+*.sct
+*.dep
+*.htm
+*.lnp
+*.crf
+*.tra
+Listings/
+Objects/
+
+# JLink
+*.jlink
+
+# System files
+Thumbs.db
+.DS_Store
+
+# WorkBuddy memory
+.workbuddy/
