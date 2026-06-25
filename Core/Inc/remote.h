@@ -57,6 +57,9 @@ typedef struct
     /* 接收到的数字 */
     int32_t receive_number;
 
+    /* 接收事件序号 (每次解析到 button,/number, 帧就 +1, 供上层板识别"新事件") */
+    uint32_t receive_seq;
+
 } RemoteData_t;
 
 /*============================================

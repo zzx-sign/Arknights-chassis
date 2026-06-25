@@ -69,6 +69,7 @@ static void parse_text_frame(const char* data, uint16_t len)
         int num_value = atoi(line + 7);
         RemoteData_t* remote = Remote_GetData();
         remote->receive_number = num_value;
+        remote->receive_seq++;            /* 每收到一帧 button, 算一次新事件 */
         return;
     }
 
@@ -77,6 +78,7 @@ static void parse_text_frame(const char* data, uint16_t len)
         int num_value = atoi(line + 7);
         RemoteData_t* remote = Remote_GetData();
         remote->receive_number = num_value;
+        remote->receive_seq++;            /* 每收到一帧 number, 算一次新事件 */
         return;
     }
 

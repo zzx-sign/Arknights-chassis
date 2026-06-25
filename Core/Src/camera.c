@@ -125,28 +125,41 @@ void Camera_Process(void)
                 raw_data[raw_data_len] = '\0';
                 rx_count++;
 
-                /* 解析数据 */
+                /* 解析数据 - 始终取第一个空格前的颜色（去掉第二个颜色） */
                 const char* space = memchr(raw_data, ' ', raw_data_len);
-                if (space != NULL) {
-                    size_t len1 = space - raw_data;
-                    if (len1 < sizeof(color1)) {
-                        strncpy(color1, raw_data, len1);
-                        color1[len1] = '\0';
-                    }
-                    size_t len2 = raw_data_len - len1 - 1;
-                    if (len2 > 0 && len2 < sizeof(color2)) {
-                        strncpy(color2, space + 1, len2);
-                        color2[len2] = '\0';
-                    }
-                    color_valid = 1;
+                size_t color_len = (space != NULL) ? (size_t)(space - raw_data) : raw_data_len;
+
+                /* 临时保存解析出的颜色 */
+                char temp_color[16];
+                if (color_len < sizeof(temp_color)) {
+                    strncpy(temp_color, raw_data, color_len);
+                    temp_color[color_len] = '\0';
                 } else {
-                    if (raw_data_len < sizeof(color1)) {
-                        strncpy(color1, raw_data, raw_data_len);
-                        color1[raw_data_len] = '\0';
-                    }
-                    memset(color2, 0, sizeof(color2));
-                    color_valid = 1;
+                    color_len = 0;
+                    temp_color[0] = '\0';
                 }
+
+                /* 颜色去重逻辑 */
+                if (temp_color[0] != '\0') {
+                    if (color1[0] == '\0') {
+                        /* color1 为空，存入第一个颜色 */
+                        strncpy(color1, temp_color, sizeof(color1) - 1);
+                        color1[sizeof(color1) - 1] = '\0';
+                    } else if (strcmp(color1, temp_color) != 0) {
+                        /* color1 已有值，且收到不同的颜色 */
+                        if (color2[0] == '\0') {
+                            /* color2 为空，存入 color2 */
+                            strncpy(color2, temp_color, sizeof(color2) - 1);
+                            color2[sizeof(color2) - 1] = '\0';
+                        } else {
+                            /* color2 已有值，替换 color2 */
+                            strncpy(color2, temp_color, sizeof(color2) - 1);
+                            color2[sizeof(color2) - 1] = '\0';
+                        }
+                    }
+                    /* 收到与 color1 相同的颜色 -> 忽略 */
+                }
+                color_valid = 1;
             }
             raw_data_len = 0;
         } else {
