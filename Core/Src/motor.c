@@ -37,6 +37,14 @@ static const int8_t encoder_sign[MOTOR_COUNT] = {
     1     /* 右后轮: 向前为正 */
 };
 
+/* 电机方向补偿 (1=正常, -1=翻转) */
+static const int8_t motor_dir_sign[MOTOR_COUNT] = {
+    1,    /* 左前轮: 实际极性与代码假设相反，需要翻转 */
+    -1,   /* 右前轮: 正常 */
+    -1,   /* 左后轮: 正常 */
+    1     /* 右后轮: 实际极性与代码假设相反，需要翻转 */
+};
+
 /* 距离校正系数 (需要实测调整) */
 static const float distance_coef[MOTOR_COUNT] = {
     0.90f,  /* 左前轮 */
@@ -85,10 +93,13 @@ static void pwm_set_compare(MotorControlBlock_t* motor, int16_t pwm)
     TIM_HandleTypeDef* tim = motor->PWM_TIM;
     uint32_t ch = motor->pwm_channel;
 
-    pwm = clamp_pwm((int16_t)(pwm * SPEED_COMPENSATION));
-
     /* 获取电机索引 (0-3) */
     uint8_t idx = motor - motor_cb;
+
+    /* 应用电机方向补偿 */
+    pwm = (int16_t)(pwm * motor_dir_sign[idx]);
+
+    pwm = clamp_pwm((int16_t)(pwm * SPEED_COMPENSATION));
 
     /* 方向引脚映射表 */
     GPIO_TypeDef* ain_port[4] = {

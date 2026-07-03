@@ -46,9 +46,11 @@ void Kinematics_SolveInverse(ChassisSpeed_t* chassis, WheelSpeedRad_t* wheel)
     float a_plus_b = WHEELBASE_HALF_A + WHEELBASE_HALF_B;
     float r = WHEEL_RADIUS_M;
 
+    /* 修正：前进时所有轮子同向 */
     wheel->left_front  = ( vx - vy - a_plus_b * omega) / r;
-    wheel->right_front = ( vx + vy + a_plus_b * omega) / r;
-    wheel->left_back   = ( vx + vy - a_plus_b * omega) / r;
+    wheel->right_front = (-vx - vy + a_plus_b * omega) / r;
+    wheel->left_back   = (-
+            vx - vy - a_plus_b * omega) / r;
     wheel->right_back  = ( vx - vy + a_plus_b * omega) / r;
 }
 
@@ -65,13 +67,13 @@ void Kinematics_SolveForward(WheelSpeedRad_t* wheel, ChassisSpeed_t* chassis)
     float r = WHEEL_RADIUS_M;
     float a_plus_b = WHEELBASE_HALF_A + WHEELBASE_HALF_B;
 
-    chassis->vx = (wheel->left_front + wheel->right_front +
+    chassis->vx = (wheel->left_front - wheel->right_front -
                    wheel->left_back + wheel->right_back) * r / 4.0f;
 
-    chassis->vy = (-wheel->left_front + wheel->right_front -
+    chassis->vy = (wheel->left_front + wheel->right_front +
                   wheel->left_back + wheel->right_back) * r / 4.0f;
 
-    chassis->omega = (-wheel->left_front + wheel->right_front +
+    chassis->omega = (wheel->left_front + wheel->right_front -
                      wheel->left_back - wheel->right_back) * r / (4.0f * a_plus_b);
 }
 
