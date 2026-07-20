@@ -57,13 +57,14 @@ void MX_GPIO_Init(void)
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOF, Driver1AIN1_Pin|Driver1AIN2_Pin|Driver2AIN1_Pin|Driver2AIN2_Pin
-                          |Driver3AIN1_Pin|Driver3AIN2_Pin|Driver4AIN1_Pin|Driver4AIN2_Pin, GPIO_PIN_RESET);
+                          |Driver3AIN1_Pin|Driver3AIN2_Pin|Driver4AIN1_Pin|Driver4AIN2_Pin
+                          |LED_Yellow_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOA, STBY1_Pin|STBY2_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, WS2812_LED_Pin|OLED_SCL_Pin|OLED_SDA_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOB, LED_Red_Pin|LED_Blue_Pin|OLED_SCL_Pin|OLED_SDA_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(LED_1_GPIO_Port, LED_1_Pin, GPIO_PIN_SET);
@@ -82,9 +83,11 @@ void MX_GPIO_Init(void)
   HAL_GPIO_Init(LED_2_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pins : Driver1AIN1_Pin Driver1AIN2_Pin Driver2AIN1_Pin Driver2AIN2_Pin
-                           Driver3AIN1_Pin Driver3AIN2_Pin Driver4AIN1_Pin Driver4AIN2_Pin */
+                           Driver3AIN1_Pin Driver3AIN2_Pin Driver4AIN1_Pin Driver4AIN2_Pin
+                           LED_Yellow_Pin */
   GPIO_InitStruct.Pin = Driver1AIN1_Pin|Driver1AIN2_Pin|Driver2AIN1_Pin|Driver2AIN2_Pin
-                          |Driver3AIN1_Pin|Driver3AIN2_Pin|Driver4AIN1_Pin|Driver4AIN2_Pin;
+                          |Driver3AIN1_Pin|Driver3AIN2_Pin|Driver4AIN1_Pin|Driver4AIN2_Pin
+                          |LED_Yellow_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -97,8 +100,8 @@ void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : WS2812_LED_Pin LED_1_Pin */
-  GPIO_InitStruct.Pin = WS2812_LED_Pin|LED_1_Pin;
+  /*Configure GPIO pins : LED_Red_Pin LED_Blue_Pin LED_1_Pin */
+  GPIO_InitStruct.Pin = LED_Red_Pin|LED_Blue_Pin|LED_1_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;

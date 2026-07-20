@@ -5,7 +5,10 @@
 
 #include "camera.h"
 #include "usart.h"
+#include "gpio.h"
 #include "string.h"
+#include "strings.h"
+#include "ctype.h"
 #include "stdio.h"
 
 /* 接收缓冲区大小 - 扩大缓冲区以支持更多数据 */
@@ -18,6 +21,89 @@ static uint8_t camera_rx_buffer[CAMERA_RX_BUFFER_SIZE];
 static char color1[16] = {0};
 static char color2[16] = {0};
 static uint8_t color_valid = 0;
+
+/*============================================
+ * 颜色 → LED 控制
+ *============================================*/
+
+/* 已点亮的颜色掩码 (bit0=Red, bit1=Blue, bit2=Yellow) */
+#define COLOR_LED_RED    (1u << 0)
+#define COLOR_LED_BLUE   (1u << 1)
+#define COLOR_LED_YELLOW (1u << 2)
+
+static uint8_t color_led_mask = 0;
+
+/**
+ * @brief 大小写不敏感字符串比较 (忽略空字符)
+ */
+static int color_strcmp_ci(const char* a, const char* b)
+{
+    if (a == NULL || b == NULL) return -1;
+    while (*a && *b) {
+        unsigned char ca = (unsigned char)*a++;
+        unsigned char cb = (unsigned char)*b++;
+        if (tolower(ca) != tolower(cb)) return -1;
+    }
+    /* 两者同时到末尾才算相等 */
+    return (*a == '\0' && *b == '\0') ? 0 : -1;
+}
+
+/**
+ * @brief 将一个颜色字符串映射到 LED 标志位
+ * @return COLOR_LED_RED / COLOR_LED_BLUE / COLOR_LED_YELLOW, 不识别返回 0
+ */
+static uint8_t color_to_led_flag(const char* color)
+{
+    if (color == NULL || color[0] == '\0') return 0;
+
+    if (color_strcmp_ci(color, "red")    == 0) return COLOR_LED_RED;
+    if (color_strcmp_ci(color, "blue")   == 0) return COLOR_LED_BLUE;
+    if (color_strcmp_ci(color, "yellow") == 0) return COLOR_LED_YELLOW;
+    return 0;
+}
+
+/**
+ * @brief 根据 color_led_mask 刷新 LED GPIO
+ *        只有在 mask 变化时才操作 GPIO, 避免无谓翻转
+ */
+static void apply_color_led(uint8_t new_mask)
+{
+    if (new_mask == color_led_mask) return;
+    color_led_mask = new_mask;
+
+    HAL_GPIO_WritePin(LED_Red_GPIO_Port,    LED_Red_Pin,
+        (new_mask & COLOR_LED_RED)    ? GPIO_PIN_SET : GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(LED_Blue_GPIO_Port,   LED_Blue_Pin,
+        (new_mask & COLOR_LED_BLUE)   ? GPIO_PIN_SET : GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(LED_Yellow_GPIO_Port, LED_Yellow_Pin,
+        (new_mask & COLOR_LED_YELLOW) ? GPIO_PIN_SET : GPIO_PIN_RESET);
+}
+
+/**
+ * @brief 公共 API: 根据当前解析到的 color1/color2 刷新 LED
+ *        - 任一为 red/blue/yellow 即点亮对应 LED
+ *        - 同时识别到多个不同颜色, 同时点亮
+ *        - 未识别到任何有效颜色, 三个 LED 全灭
+ */
+void Camera_UpdateLedByColor(void)
+{
+    uint8_t mask = 0;
+
+    if (color_valid) {
+        mask |= color_to_led_flag(color1);
+        mask |= color_to_led_flag(color2);
+    }
+
+    apply_color_led(mask);
+}
+
+/**
+ * @brief 复位 LED 状态 (颜色失效时调用)
+ */
+void Camera_ClearLeds(void)
+{
+    apply_color_led(0);
+}
 
 /* 调试用数据 */
 static char raw_data[64] = {0};
@@ -125,41 +211,29 @@ void Camera_Process(void)
                 raw_data[raw_data_len] = '\0';
                 rx_count++;
 
-                /* 解析数据 - 始终取第一个空格前的颜色（去掉第二个颜色） */
-                const char* space = memchr(raw_data, ' ', raw_data_len);
-                size_t color_len = (space != NULL) ? (size_t)(space - raw_data) : raw_data_len;
+                /* 解析数据 - 按逗号拆成两个颜色，整帧覆盖 color1/color2 */
+                const char* comma = memchr(raw_data, ',', raw_data_len);
+                size_t c1_len = (comma != NULL) ? (size_t)(comma - raw_data) : raw_data_len;
 
-                /* 临时保存解析出的颜色 */
-                char temp_color[16];
-                if (color_len < sizeof(temp_color)) {
-                    strncpy(temp_color, raw_data, color_len);
-                    temp_color[color_len] = '\0';
-                } else {
-                    color_len = 0;
-                    temp_color[0] = '\0';
+                /* 第二个颜色起始位置：逗号之后第一个非空字符 */
+                const char* c2_start = raw_data + c1_len;
+                if (comma != NULL) {
+                    c2_start = comma + 1;
                 }
+                size_t c2_len = raw_data_len - (size_t)(c2_start - raw_data);
 
-                /* 颜色去重逻辑 */
-                if (temp_color[0] != '\0') {
-                    if (color1[0] == '\0') {
-                        /* color1 为空，存入第一个颜色 */
-                        strncpy(color1, temp_color, sizeof(color1) - 1);
-                        color1[sizeof(color1) - 1] = '\0';
-                    } else if (strcmp(color1, temp_color) != 0) {
-                        /* color1 已有值，且收到不同的颜色 */
-                        if (color2[0] == '\0') {
-                            /* color2 为空，存入 color2 */
-                            strncpy(color2, temp_color, sizeof(color2) - 1);
-                            color2[sizeof(color2) - 1] = '\0';
-                        } else {
-                            /* color2 已有值，替换 color2 */
-                            strncpy(color2, temp_color, sizeof(color2) - 1);
-                            color2[sizeof(color2) - 1] = '\0';
-                        }
-                    }
-                    /* 收到与 color1 相同的颜色 -> 忽略 */
-                }
+                /* 写入 color1 */
+                if (c1_len >= sizeof(color1)) c1_len = sizeof(color1) - 1;
+                memcpy(color1, raw_data, c1_len);
+                color1[c1_len] = '\0';
+
+                /* 写入 color2（即使为空也写，保证清掉旧值）*/
+                if (c2_len >= sizeof(color2)) c2_len = sizeof(color2) - 1;
+                memcpy(color2, c2_start, c2_len);
+                color2[c2_len] = '\0';
+
                 color_valid = 1;
+                Camera_UpdateLedByColor();
             }
             raw_data_len = 0;
         } else {
@@ -255,5 +329,9 @@ void Camera_Reset(void)
     read_cnt = 0;
     write_cnt = 0;
     last_write_idx = 0;
+    color_valid = 0;
+    color1[0] = '\0';
+    color2[0] = '\0';
+    Camera_ClearLeds();
     HAL_UART_Receive_DMA(&huart3, camera_rx_buffer, CAMERA_RX_BUFFER_SIZE);
 }

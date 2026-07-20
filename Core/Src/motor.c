@@ -5,10 +5,9 @@
 
 #include "motor.h"
 #include "cmsis_os.h"
+#include "tim.h"
 #include <string.h>
 #include <stdlib.h>
-
-#include "tim.h"
 
 /*============================================
  * 静态变量
@@ -39,26 +38,28 @@ static const int8_t encoder_sign[MOTOR_COUNT] = {
 
 /* 电机方向补偿 (1=正常, -1=翻转) */
 static const int8_t motor_dir_sign[MOTOR_COUNT] = {
-    1,    /* 左前轮: 实际极性与代码假设相反，需要翻转 */
-    -1,   /* 右前轮: 正常 */
-    -1,   /* 左后轮: 正常 */
-    1     /* 右后轮: 实际极性与代码假设相反，需要翻转 */
-};
+    1,    // 左前轮: 
+    -1,   //右前轮: 
+    -1,   //左后轮: 
+    1     //右后轮: 
+};      
 
 /* 距离校正系数 (需要实测调整) */
 static const float distance_coef[MOTOR_COUNT] = {
-    0.90f,  /* 左前轮 */
-    0.94f,  /* 右前轮 */
-    0.85f,  /* 左后轮 */
-    0.91f   /* 右后轮 */
+    1.0f,  /* 左前轮 */
+    1.0f,  /* 右前轮 */
+    1.0f,  /* 左后轮 */
+    1.0f   /* 右后轮 */
 };
 
-/* 一圈编码器脉冲数 (需要实测) */
-static const uint16_t encoder_ppr[MOTOR_COUNT] = {
-    3692,  /* 左前轮 */
-    3692,  /* 右前轮 */
-    3692,  /* 左后轮 */
-    3692   /* 右后轮 */
+/* 一圈编码器脉冲数由 config.h 的 ENCODER_STANDARD_PPR 提供 (单点定义) */
+
+/* 编码器 TIM 映射表 (供 Motor_Init 和 Encoder_Init 共用) */
+static TIM_HandleTypeDef* const encoder_tims[MOTOR_COUNT] = {
+    MOTOR1_ENCODER_TIM,
+    MOTOR2_ENCODER_TIM,
+    MOTOR3_ENCODER_TIM,
+    MOTOR4_ENCODER_TIM
 };
 
 /*============================================
@@ -200,13 +201,6 @@ void Motor_Init(void)
         MOTOR_PWM_CHANNEL_4
     };
 
-    TIM_HandleTypeDef* encoder_tims[MOTOR_COUNT] = {
-        MOTOR1_ENCODER_TIM,
-        MOTOR2_ENCODER_TIM,
-        MOTOR3_ENCODER_TIM,
-        MOTOR4_ENCODER_TIM
-    };
-
     for (int i = 0; i < MOTOR_COUNT; i++) {
         MotorControlBlock_t* motor = &motor_cb[i];
 
@@ -214,9 +208,9 @@ void Motor_Init(void)
         motor->pwm_channel = pwm_channels[i];
         motor->encoder_TIM = encoder_tims[i];
         motor->encoder_sign = encoder_sign[i];
-        motor->encoder_one_round = encoder_ppr[i];
+        motor->encoder_one_round = ENCODER_STANDARD_PPR;
         motor->distance_coefficient = distance_coef[i];
-        motor->mode = MOTOR_MODE_OPEN_LOOP_PWM;
+        motor->mode = motor->mode = MOTOR_MODE_OPEN_LOOP_PWM;;
         motor->target_speed = 0;
         motor->feedback_speed = 0;
         motor->PWM = 0;
@@ -256,13 +250,6 @@ void Motor_Init(void)
  */
 void Encoder_Init(void)
 {
-    TIM_HandleTypeDef* encoder_tims[MOTOR_COUNT] = {
-        MOTOR1_ENCODER_TIM,
-        MOTOR2_ENCODER_TIM,
-        MOTOR3_ENCODER_TIM,
-        MOTOR4_ENCODER_TIM
-    };
-
     for (int i = 0; i < MOTOR_COUNT; i++) {
         HAL_TIM_Encoder_Start(encoder_tims[i], TIM_CHANNEL_ALL);
         /* 记录初始值 */

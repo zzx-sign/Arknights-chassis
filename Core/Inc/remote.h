@@ -18,17 +18,21 @@
 enum RemoteType
 {
     REMOTE_TYPE_NONE = 0,
-    REMOTE_TYPE_BLUETOOTH,     /* 蓝牙遥控 */
+    REMOTE_TYPE_BLUETOOTH,     /* 蓝牙遥控 (当前唯一支持) */
     REMOTE_TYPE_RESERVED,      /* 保留 */
-    REMOTE_TYPE_KEYBOARD       /* 键盘控制 */
+    REMOTE_TYPE_KEYBOARD       /* 键盘控制 (未实现) */
 };
 
 /*============================================
  * 遥控数据
+ *
+ * 蓝牙文本协议 (见 bluetooth.c) 直接更新 raw_xxx / vx / vy / omega /
+ * receive_number / receive_seq 字段;
+ * ch0 到 ch3、s1 到 s2 保留用于未来 DBUS/SBUS 等原始通道数据 (Remote_Update)。
  *============================================*/
 typedef struct
 {
-    /* 遥杆/按键数据 */
+    /* 原始通道 (保留, 当前未使用) */
     int16_t ch0;   /* 左摇杆X */
     int16_t ch1;   /* 左摇杆Y */
     int16_t ch2;   /* 右摇杆X */
@@ -36,7 +40,7 @@ typedef struct
     uint8_t s1;    /* 开关1 */
     uint8_t s2;    /* 开关2 */
 
-    /* 原始摇杆百分比值 (-100 ~ +100) */
+    /* 蓝牙原始摇杆百分比值 (-100 ~ +100) */
     int16_t raw_left_x;    /* 左摇杆X原始值 */
     int16_t raw_left_y;    /* 左摇杆Y原始值 */
     int16_t raw_right_x;   /* 右摇杆X原始值 */
@@ -72,12 +76,9 @@ typedef struct
 void Remote_Init(void);
 
 /**
- * @brief 解析遥控器数据
- */
-void Remote_Parse(void);
-
-/**
- * @brief 更新遥控器数据
+ * @brief 更新遥控器原始通道数据 (保留接口, 当前未启用)
+ *
+ * 若未来接入 DBUS/SBUS 等接收机, 在解析出 ch0~ch3/s1~s2 后调用本函数。
  */
 void Remote_Update(int16_t ch0, int16_t ch1, int16_t ch2, int16_t ch3, uint8_t s1, uint8_t s2);
 
@@ -102,7 +103,7 @@ void Remote_SetType(enum RemoteType type);
 enum RemoteType Remote_GetType(void);
 
 /**
- * @brief 蓝牙模式直接更新速度
+ * @brief 蓝牙模式直接更新速度 (当前实际使用的入口)
  */
 void Remote_UpdateBt(int16_t vx, int16_t vy, int16_t omega);
 

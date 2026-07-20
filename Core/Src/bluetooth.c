@@ -8,6 +8,7 @@
 #include "cmsis_os.h"
 #include "remote.h"
 #include "main.h"
+#include "config.h"
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -118,12 +119,12 @@ static void parse_text_frame(const char* data, uint16_t len)
     remote->raw_right_y = right_y;
 
     /* 映射到速度单位 mm/s
-     * 根据 config.h 中的 MAX_XXX_MM_S 映射
-     * 摇杆值100对应最大速度
+     * 根据 config.h 中的 MAX_LINEAR_SPEED_MM_S / MAX_ANGULAR_SPEED_MM_S
+     * 摇杆值 ±100 对应最大速度
      */
-    int16_t vx    = (int16_t)((left_x  * 800.0f) / 100.0f);   /* vx: 左右移动 */
-    int16_t vy    = (int16_t)((-left_y * 800.0f) / 100.0f);   /* vy: 前进后退 (Y轴取反) */
-    int16_t omega = (int16_t)((right_x * 500.0f) / 100.0f);   /* omega: 旋转 */
+    int16_t vx    = (int16_t)((left_x  * MAX_LINEAR_SPEED_MM_S)  / 100.0f);   /* vx: 左右移动 */
+    int16_t vy    = (int16_t)((-left_y * MAX_LINEAR_SPEED_MM_S)  / 100.0f);   /* vy: 前进后退 (Y轴取反) */
+    int16_t omega = (int16_t)((-right_x * MAX_ANGULAR_SPEED_MM_S) / 100.0f);  /* omega: 旋转 (取反，右摇杆左拉→左转) */
 
     /* 更新遥控数据 */
     Remote_UpdateBt(vx, vy, omega);

@@ -40,4 +40,10 @@ uint8_t Camera_GetDebugInfo(uint32_t* pRxCount, uint32_t* pRawLen, uint8_t* pVal
 /* 数据发送 */
 void Camera_SendToBluetooth(UART_HandleTypeDef* huart);
 
+/* 根据当前解析到的颜色刷新 LED (red->PB0, blue->PB2, yellow->PF12) */
+void Camera_UpdateLedByColor(void);
+
+/* 关闭所有颜色 LED */
+void Camera_ClearLeds(void);
+
 #endif /* __CAMERA_H__ */

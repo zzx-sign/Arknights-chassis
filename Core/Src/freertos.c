@@ -61,21 +61,21 @@
 osThreadId_t PID_TaskHandle;
 const osThreadAttr_t PID_Task_attributes = {
   .name = "PID_Task",
-  .stack_size = 1024 * 4,
+  .stack_size = 128 * 4,
   .priority = (osPriority_t) osPriorityHigh,
 };
 /* Definitions for Bluetooth_Task */
 osThreadId_t Bluetooth_TaskHandle;
 const osThreadAttr_t Bluetooth_Task_attributes = {
   .name = "Bluetooth_Task",
-  .stack_size = 256 * 4,
+  .stack_size = 128 * 4,
   .priority = (osPriority_t) osPriorityNormal,
 };
 /* Definitions for Camera_Task */
 osThreadId_t Camera_TaskHandle;
 const osThreadAttr_t Camera_Task_attributes = {
   .name = "Camera_Task",
-  .stack_size = 256 * 4,
+  .stack_size = 128 * 4,
   .priority = (osPriority_t) osPriorityLow,
 };
 /* Definitions for KeyTask */
@@ -89,7 +89,7 @@ const osThreadAttr_t KeyTask_attributes = {
 osThreadId_t UpComm_TaskHandle;
 const osThreadAttr_t UpComm_Task_attributes = {
   .name = "UpComm_Task",
-  .stack_size = 256 * 4,
+  .stack_size = 128 * 4,
   .priority = (osPriority_t) osPriorityAboveNormal,
 };
 /* Definitions for xCmdQueue */

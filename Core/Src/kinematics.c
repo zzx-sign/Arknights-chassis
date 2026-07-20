@@ -125,10 +125,31 @@ void Kinematics_SetTarget(float vx, float vy, float omega_mm_s)
     Kinematics_SolveInverse(&target_chassis_speed, &wheel_rad);
 
     /* 转换为 mm/s */
-    target_wheel_speed_mm.left_front  = (int16_t)(wheel_rad.left_front  * 1000.0f * WHEEL_RADIUS_M);
-    target_wheel_speed_mm.right_front = (int16_t)(wheel_rad.right_front * 1000.0f * WHEEL_RADIUS_M);
-    target_wheel_speed_mm.left_back   = (int16_t)(wheel_rad.left_back   * 1000.0f * WHEEL_RADIUS_M);
-    target_wheel_speed_mm.right_back  = (int16_t)(wheel_rad.right_back  * 1000.0f * WHEEL_RADIUS_M);
+    float w_mm[4];
+    w_mm[0] = wheel_rad.left_front  * 1000.0f * WHEEL_RADIUS_M;
+    w_mm[1] = wheel_rad.right_front * 1000.0f * WHEEL_RADIUS_M;
+    w_mm[2] = wheel_rad.left_back   * 1000.0f * WHEEL_RADIUS_M;
+    w_mm[3] = wheel_rad.right_back  * 1000.0f * WHEEL_RADIUS_M;
+
+    /* 麦轮 IK 非保模，几何上 wheel_speed = vx ± vy ± (a+b)/r * omega，
+     * 极限拉杆时单轮需求可达线速度上限的 ~3 倍。
+     * 若不缩放，PID 会在某轮先饱和，导致实际运动方向偏离摇杆方向。
+     * 在转 int16 之前做等比缩放，保证运动方向不变。 */
+    float max_abs = 0.0f;
+    for (int i = 0; i < 4; i++) {
+        float a = w_mm[i] < 0.0f ? -w_mm[i] : w_mm[i];
+        if (a > max_abs) max_abs = a;
+    }
+    float scale = 1.0f;
+    if (max_abs > MAX_WHEEL_SPEED_MM_S) {
+        scale = MAX_WHEEL_SPEED_MM_S / max_abs;
+        for (int i = 0; i < 4; i++) w_mm[i] *= scale;
+    }
+
+    target_wheel_speed_mm.left_front  = (int16_t)w_mm[0];
+    target_wheel_speed_mm.right_front = (int16_t)w_mm[1];
+    target_wheel_speed_mm.left_back   = (int16_t)w_mm[2];
+    target_wheel_speed_mm.right_back  = (int16_t)w_mm[3];
 }
 
 /**

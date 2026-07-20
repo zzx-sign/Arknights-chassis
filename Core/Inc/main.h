@@ -87,8 +87,12 @@ void Error_Handler(void);
 #define Encoder2_1_GPIO_Port GPIOA
 #define Encoder2_2_Pin GPIO_PIN_7
 #define Encoder2_2_GPIO_Port GPIOA
-#define WS2812_LED_Pin GPIO_PIN_1
-#define WS2812_LED_GPIO_Port GPIOB
+#define LED_Red_Pin GPIO_PIN_0
+#define LED_Red_GPIO_Port GPIOB
+#define LED_Blue_Pin GPIO_PIN_2
+#define LED_Blue_GPIO_Port GPIOB
+#define LED_Yellow_Pin GPIO_PIN_12
+#define LED_Yellow_GPIO_Port GPIOF
 #define PWM1_Pin GPIO_PIN_9
 #define PWM1_GPIO_Port GPIOE
 #define PWM2_Pin GPIO_PIN_11

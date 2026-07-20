@@ -2,7 +2,7 @@
  * @file config.h
  * @brief 项目配置头文件
  *
- * 包含机械参数、PID参数、宏定义等
+ * 包含机械参数、宏定义等
  */
 
 #ifndef __CONFIG_H__
@@ -32,13 +32,11 @@
 #define WHEELBASE_ROTATION_RADIUS_MM ((WHEELBASE_HALF_A + WHEELBASE_HALF_B) * 1000.0f)  /* 等效旋转半径 mm */
 
 /* 编码器参数 */
-#define ENCODER_PPR            3692         /* 编码器每转脉冲数 (需确认) */
-#define ENCODER_STANDARD_PPR   3692        /* 标准一圈脉冲数 */
+#define ENCODER_STANDARD_PPR   3692        /* 编码器每转脉冲数 (X4 倍频后, 需实测) */
 
 /*============================================
- * PWM与速度映射表 (需要标定)
+ * PWM配置
  *============================================*/
-#define MOTOR_SPEED_TABLE_SIZE  7
 
 /* PWM限幅 */
 #define MAX_PWM                 3600        /* 最大PWM，约为Period的50%以保留死区 */
@@ -57,19 +55,10 @@ static inline int16_t abs16(int16_t data_in)
     return data_in < 0 ? -data_in : data_in;
 }
 
-/* 线性插值 */
-static inline float lerpf(float a, float b, float t)
-{
-    return a + (b - a) * t;
-}
-
-/* 范围内检测 */
-#define inRange(val, a, b) (((a) <= (b)) ? ((val) >= (a) && (val) <= (b)) : ((val) >= (b) && (val) <= (a)))
-
 /*============================================
  * 单位换算
  *============================================*/
-#define ENCODE_OF_ONE_MM    (ENCODER_STANDARD_PPR / (WHEEL_DIAMETER_MM * 3.14159f))
+#define ENCODE_OF_ONE_MM    (ENCODER_STANDARD_PPR / (WHEEL_DIAMETER_MM * 3.14159265f))
 
 /**
  * @brief 将每0.1秒的脉冲数换算为 mm/s
@@ -92,16 +81,8 @@ static inline int16_t mm_per_s_to_pulses(int32_t mm_per_s)
 }
 
 /*============================================
- * PID默认参数
+ * PID优化环节 (实际参数在 motor.c 写死)
  *============================================*/
-#define DEFAULT_KP             0.0f
-#define DEFAULT_KI             0.0f
-#define DEFAULT_KD             0.0f
-#define DEFAULT_MAX_OUT         6500.0f
-#define DEFAULT_DEAD_BAND       5.0f
-#define DEFAULT_INTEGRAL_LIMIT 1000.0f
-
-/* PID优化环节 */
 #define PID_IMPROVE_NONE                   (0x00)
 #define PID_Integral_Limit                 (0x01 << 0)  /* 积分限幅 */
 #define PID_Derivative_On_Measurement      (0x01 << 1)  /* 微分先行 */
@@ -115,13 +96,16 @@ static inline int16_t mm_per_s_to_pulses(int32_t mm_per_s)
 /*============================================
  * 控制参数
  *============================================*/
-#define MOTOR_CMD_SLEW_STEP_SPEED_LOOP     200    /* 速度环目标变化步进 */
-#define MOTOR_CMD_SLEW_STEP_OPEN_LOOP      600    /* 开环目标变化步进 */
-#define MOTOR_STOP_SLEW_STEP               250    /* 停止时步进 */
+#define MOTOR_CMD_SLEW_STEP_SPEED_LOOP     500    /* 速度环目标变化步进 */
+#define MOTOR_CMD_SLEW_STEP_OPEN_LOOP      1500   /* 开环目标变化步进 */
+#define MOTOR_STOP_SLEW_STEP               500    /* 停止时步进 */
 
 /* 最大速度限制 (mm/s) - omega 使用等效切向速度表示 */
-#define MAX_LINEAR_SPEED_MM_S   2000.0f    /* 最大线速度 mm/s */
-#define MAX_ANGULAR_SPEED_MM_S  1000.0f    /* 最大旋转等效速度 mm/s (表示旋转时的切向线速度) */
+#define MAX_LINEAR_SPEED_MM_S   4000.0f    /* 最大线速度 mm/s */
+#define MAX_ANGULAR_SPEED_MM_S  2000.0f    /* 最大旋转等效速度 mm/s (表示旋转时的切向线速度) */
+
+/* 单轮最大速度 (mm/s) - IK 解算后的轮速限幅阈值 */
+#define MAX_WHEEL_SPEED_MM_S    6000.0f    /* 单轮线速度上限，超过则整组等比缩放 */
 
 /*============================================
  * 状态类型
