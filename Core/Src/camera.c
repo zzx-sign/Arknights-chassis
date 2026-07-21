@@ -20,6 +20,7 @@ static uint8_t camera_rx_buffer[CAMERA_RX_BUFFER_SIZE];
 /* 解析后的颜色数据 */
 static char color1[16] = {0};
 static char color2[16] = {0};
+static char color3[16] = {0};  /* 专门处理三个颜色数据时的第三个颜色 */
 static uint8_t color_valid = 0;
 
 /*============================================
@@ -81,9 +82,8 @@ static void apply_color_led(uint8_t new_mask)
 
 /**
  * @brief 公共 API: 根据当前解析到的 color1/color2 刷新 LED
- *        - 任一为 red/blue/yellow 即点亮对应 LED
- *        - 同时识别到多个不同颜色, 同时点亮
- *        - 未识别到任何有效颜色, 三个 LED 全灭
+ *        - 有逗号时：color1/color2 控制 LED
+ *        - 无逗号时：color3 不控制 LED
  */
 void Camera_UpdateLedByColor(void)
 {
@@ -131,6 +131,7 @@ void Camera_Init(void)
     memset(camera_rx_buffer, 0, sizeof(camera_rx_buffer));
     memset(color1, 0, sizeof(color1));
     memset(color2, 0, sizeof(color2));
+    memset(color3, 0, sizeof(color3));
     memset(raw_data, 0, sizeof(raw_data));
     raw_data_len = 0;
     color_valid = 0;
@@ -211,26 +212,40 @@ void Camera_Process(void)
                 raw_data[raw_data_len] = '\0';
                 rx_count++;
 
-                /* 解析数据 - 按逗号拆成两个颜色，整帧覆盖 color1/color2 */
-                const char* comma = memchr(raw_data, ',', raw_data_len);
-                size_t c1_len = (comma != NULL) ? (size_t)(comma - raw_data) : raw_data_len;
+                /* 解析数据 - 根据颜色数量决定更新哪些变量 */
+                /* 两个颜色: color1,color2 -> 更新C1和C2，清空C3 */
+                /* 三个颜色: color1,color2,color3 -> 只更新C3 */
 
-                /* 第二个颜色起始位置：逗号之后第一个非空字符 */
-                const char* c2_start = raw_data + c1_len;
-                if (comma != NULL) {
-                    c2_start = comma + 1;
+                const char* comma1 = memchr(raw_data, ',', raw_data_len);
+                if (comma1 != NULL) {
+                    /* 找第二个逗号判断是2个还是3个颜色 */
+                    const char* comma2 = memchr(comma1 + 1, ',', raw_data_len - (size_t)(comma1 + 1 - raw_data));
+                    if (comma2 != NULL) {
+                        /* 三个颜色：只更新 color3，保留 C1/C2 */
+                        const char* c3_start = comma2 + 1;
+                        size_t c3_len = raw_data_len - (size_t)(c3_start - raw_data);
+                        color3[0] = '\0';
+                        if (c3_len > 0 && c3_len < sizeof(color3) - 1) {
+                            memcpy(color3, c3_start, c3_len);
+                            color3[c3_len] = '\0';
+                        }
+                    } else {
+                        /* 两个颜色：更新 color1 和 color2，清空 color3 */
+                        size_t c1_len = (size_t)(comma1 - raw_data);
+                        const char* c2_start = comma1 + 1;
+                        size_t c2_len = raw_data_len - (size_t)(c2_start - raw_data);
+
+                        if (c1_len >= sizeof(color1)) c1_len = sizeof(color1) - 1;
+                        memcpy(color1, raw_data, c1_len);
+                        color1[c1_len] = '\0';
+
+                        if (c2_len >= sizeof(color2)) c2_len = sizeof(color2) - 1;
+                        memcpy(color2, c2_start, c2_len);
+                        color2[c2_len] = '\0';
+
+                        color3[0] = '\0';
+                    }
                 }
-                size_t c2_len = raw_data_len - (size_t)(c2_start - raw_data);
-
-                /* 写入 color1 */
-                if (c1_len >= sizeof(color1)) c1_len = sizeof(color1) - 1;
-                memcpy(color1, raw_data, c1_len);
-                color1[c1_len] = '\0';
-
-                /* 写入 color2（即使为空也写，保证清掉旧值）*/
-                if (c2_len >= sizeof(color2)) c2_len = sizeof(color2) - 1;
-                memcpy(color2, c2_start, c2_len);
-                color2[c2_len] = '\0';
 
                 color_valid = 1;
                 Camera_UpdateLedByColor();
@@ -258,6 +273,14 @@ const char* Camera_GetColor1(void)
 const char* Camera_GetColor2(void)
 {
     return color2;
+}
+
+/**
+ * @brief 获取第三个颜色 (三个颜色格式时的第三个颜色)
+ */
+const char* Camera_GetColor3(void)
+{
+    return color3;
 }
 
 /**
@@ -294,13 +317,18 @@ uint32_t Camera_GetRxCount(void)
 
 /**
  * @brief 发送颜色数据到蓝牙
+ * 格式: color:c1,c2;c3\r\n
+ *       c1,c2 是前两个颜色，c3 是第三个颜色(可能包含多个，用逗号分隔)
  */
 void Camera_SendToBluetooth(UART_HandleTypeDef* huart)
 {
     if (!color_valid) return;
 
-    char tx_buf[48];
-    int len = sprintf(tx_buf, "color:%s %s\r\n", color1, color2);
+    char tx_buf[64];
+    const char* c1_str = (color1[0] != '\0') ? color1 : "-";
+    const char* c2_str = (color2[0] != '\0') ? color2 : "-";
+    const char* c3_str = (color3[0] != '\0') ? color3 : "-";
+    int len = sprintf(tx_buf, "color:%s,%s;%s\r\n", c1_str, c2_str, c3_str);
     HAL_UART_Transmit(huart, (uint8_t*)tx_buf, len, 100);
 }
 
@@ -332,6 +360,7 @@ void Camera_Reset(void)
     color_valid = 0;
     color1[0] = '\0';
     color2[0] = '\0';
+    color3[0] = '\0';
     Camera_ClearLeds();
     HAL_UART_Receive_DMA(&huart3, camera_rx_buffer, CAMERA_RX_BUFFER_SIZE);
 }

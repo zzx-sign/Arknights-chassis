@@ -396,11 +396,17 @@ void StartPID_Task(void *argument)
       if (valid) {
         OLED_Printf(0, 40, OLED_6X8, "C1:%s", Camera_GetColor1());
         OLED_Printf(64, 40, OLED_6X8, "C2:%s", Camera_GetColor2());
+        /* color3 显示第三个及以后的颜色 */
+        const char* c3 = Camera_GetColor3();
+        if (c3[0] != '\0') {
+          OLED_Printf(0, 50, OLED_6X8, "C3:%s", c3);
+        } else {
+          OLED_Printf(0, 50, OLED_6X8, "C3:None");
+        }
       } else {
         OLED_Printf(0, 40, OLED_6X8, "Color:Waiting");
+        OLED_Printf(0, 50, OLED_6X8, "C3:None");
       }
-
-      OLED_Printf(0, 50, OLED_6X8, "Num:%d", remote->receive_number);
 
       OLED_Update();
     }

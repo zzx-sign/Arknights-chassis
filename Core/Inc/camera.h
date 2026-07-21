@@ -27,6 +27,7 @@ void Camera_Reset(void);
 /* 数据获取 */
 const char* Camera_GetColor1(void);
 const char* Camera_GetColor2(void);
+const char* Camera_GetColor3(void);
 uint8_t Camera_IsValid(void);
 
 /* 调试用 */
