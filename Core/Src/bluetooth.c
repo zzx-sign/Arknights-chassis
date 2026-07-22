@@ -122,7 +122,7 @@ static void parse_text_frame(const char* data, uint16_t len)
      * 根据 config.h 中的 MAX_LINEAR_SPEED_MM_S / MAX_ANGULAR_SPEED_MM_S
      * 摇杆值 ±100 对应最大速度
      */
-    int16_t vx    = (int16_t)((left_x  * MAX_LINEAR_SPEED_MM_S)  / 100.0f);   /* vx: 左右移动 */
+    int16_t vx    = (int16_t)((-left_x * MAX_LINEAR_SPEED_MM_S)  / 100.0f);   /* vx: 左右移动 (取反) */
     int16_t vy    = (int16_t)((-left_y * MAX_LINEAR_SPEED_MM_S)  / 100.0f);   /* vy: 前进后退 (Y轴取反) */
     int16_t omega = (int16_t)((-right_x * MAX_ANGULAR_SPEED_MM_S) / 100.0f);  /* omega: 旋转 (取反，右摇杆左拉→左转) */
 
