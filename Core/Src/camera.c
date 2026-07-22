@@ -213,24 +213,21 @@ void Camera_Process(void)
                 rx_count++;
 
                 /* 解析数据 - 根据颜色数量决定更新哪些变量 */
-                /* 两个颜色: color1,color2 -> 更新C1和C2，清空C3 */
-                /* 三个颜色: color1,color2,color3 -> 只更新C3 */
+                /* 两个颜色: color1,color2 -> 更新C1和C2，C3保持不变 */
+                /* 三个颜色: color1,color2,color3 -> 只更新C3，保留C1和C2 */
 
                 const char* comma1 = memchr(raw_data, ',', raw_data_len);
                 if (comma1 != NULL) {
                     /* 找第二个逗号判断是2个还是3个颜色 */
                     const char* comma2 = memchr(comma1 + 1, ',', raw_data_len - (size_t)(comma1 + 1 - raw_data));
                     if (comma2 != NULL) {
-                        /* 三个颜色：只更新 color3，保留 C1/C2 */
-                        const char* c3_start = comma2 + 1;
-                        size_t c3_len = raw_data_len - (size_t)(c3_start - raw_data);
-                        color3[0] = '\0';
-                        if (c3_len > 0 && c3_len < sizeof(color3) - 1) {
-                            memcpy(color3, c3_start, c3_len);
-                            color3[c3_len] = '\0';
-                        }
+                        /* 三个颜色：color3 存完整原始数据，保留 C1/C2 */
+                        size_t raw_len = raw_data_len;
+                        if (raw_len >= sizeof(color3)) raw_len = sizeof(color3) - 1;
+                        memcpy(color3, raw_data, raw_len);
+                        color3[raw_len] = '\0';
                     } else {
-                        /* 两个颜色：更新 color1 和 color2，清空 color3 */
+                        /* 两个颜色：更新 color1 和 color2，C3保持不变 */
                         size_t c1_len = (size_t)(comma1 - raw_data);
                         const char* c2_start = comma1 + 1;
                         size_t c2_len = raw_data_len - (size_t)(c2_start - raw_data);
@@ -242,8 +239,6 @@ void Camera_Process(void)
                         if (c2_len >= sizeof(color2)) c2_len = sizeof(color2) - 1;
                         memcpy(color2, c2_start, c2_len);
                         color2[c2_len] = '\0';
-
-                        color3[0] = '\0';
                     }
                 }
 
